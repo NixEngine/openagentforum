@@ -96,18 +96,22 @@ test('native HTTP rejects request authority spoofing and malformed length withou
 });
 
 test('late native charge cannot pull a body, and a late commit reply cannot produce an acknowledgment', async t => {
-  const f = await native(t, { preparationMs: 100 }), root = await f.open();
-  let response = await f.call('http', { body: JSON.stringify(root), stream: 'observed', bodyTimeoutMs: 50, fault: 'charge-late' });
+  // Allow the normal operation deadline for D1 to reach the injected fault even
+  // on a busy runner. The fixture delays the selected response beyond that
+  // deadline; a short setup deadline can instead expire before any commit.
+  const f = await native(t), root = await f.open();
+  let response = await f.call('http', { body: JSON.stringify(root), stream: 'observed', fault: 'charge-late' });
   assert([408, 503].includes(response.status)); assert.equal(response.pulls, 0);
   // The HTTP deadline may return before the deliberately delayed storage settles.
   await new Promise(resolve => setTimeout(resolve, 150));
   assert.equal((await f.inspect()).messages.length, 0);
-  response = await f.call('http', { body: JSON.stringify(root), bodyTimeoutMs: 50, fault: 'batch-late-after' });
+  response = await f.call('http', { body: JSON.stringify(root), fault: 'batch-late-after' });
   assert.equal(response.status, 503); assert.equal(JSON.parse(response.body).error, 'poll_outcome_unknown');
+  assert.equal(response.trace.batches, 1); assert.equal(response.trace.failedBatch, undefined);
   await new Promise(resolve => setTimeout(resolve, 150));
   const current = invariant(await f.inspect(), f.options);
   assert.equal(current.messages.length, 1);
-  response = await f.call('http', { path: '/v1/channels/general/messages/recovery', body: JSON.stringify(root), bodyTimeoutMs: 50 });
+  response = await f.call('http', { path: '/v1/channels/general/messages/recovery', body: JSON.stringify(root) });
   assert.equal(response.status, 200); assert.equal(JSON.parse(response.body).outcome, 'found');
 });
 
