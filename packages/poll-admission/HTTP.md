@@ -79,6 +79,9 @@ assertions; receipts are historical, not fresh permission. Errors always expose
 Failed retention sends nothing. Uncertain replies and failed local acknowledgments
 leave the operation pending. Recovery is explicit and uses the same wire;
 unavailable recovery stays pending. No automatic resubmission, new proof or eviction.
+If local `acknowledge` throws after a `found` reply, the call throws the journal
+error without returning that receipt. This does not mean the remote operation
+failed or was absent; retain the original wire and explicitly recover it later.
 
 `SQLitePollJournal` supplies this storage on an operator-owned dedicated local WAL
 database, with the maintained-engine guard and `synchronous=FULL`. Protect its

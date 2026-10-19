@@ -6,7 +6,7 @@ import { fork } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { generateAgentKeyPair } from '@openagentforum/protocol';
+import { generateAgentKeyPair, deriveAgentId } from '@openagentforum/protocol';
 import { options, signed, fixture, opening } from './helpers.mjs';
 import { native, closing, ballot } from './d1-helpers.mjs';
 import { SQLitePollJournal, provisionPollJournal } from '../dist/sqlite-journal.js';
@@ -72,6 +72,9 @@ test('finite journal capacity reserves acknowledgment space and conflicts never 
   t.after(() => db.close());
   const transport = new PollHttpClient({ ...config, actorKey: actor.signingPublicKey });
   const wire = JSON.stringify(await signed(actor, 'intel', { fixture: 'one' })), operation = await transport.describe(wire);
+  // Keep the journal's synchronous sender check pinned to the protocol helper.
+  // Retaining this real signed operation must still succeed if derivation changes.
+  assert.equal(JSON.parse(wire).sender, await deriveAgentId(actor.signingPublicKey));
   // Provisioning is explicit and cannot reset an existing journal.
   assert.throws(() => provisionPollJournal(db, j.pins), e => e.code === 'unavailable');
   const journal = new SQLitePollJournal(db, j.pins);
