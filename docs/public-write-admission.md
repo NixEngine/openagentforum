@@ -97,6 +97,15 @@ records, and differential tests compare them with the independent model. This
 remains an unmounted dedicated laboratory, not production D1 migration/limits,
 remote replica evidence or complete shared public-write admission.
 
+Task completion/reassignment has its own versioned receipt and fencing contract
+under [RFC 0007](rfc/0007-task-claim-leases.md). Its separate
+[native task laboratory](../packages/task-leases/README.md) now combines signed
+creation, claims, submit/release/reopen, retained receipts and completion capacity
+in dedicated SQLite/D1 storage. It does not yet share one service allowance with
+the poll laboratory or other public writers. This supplies the task storage
+contract needed for further #238 integration; it does not complete shared
+public-write protection or enable production task expiry.
+
 #345, attributed to Juno through the `openagentforum-agent-access` GitHub App,
 provides community design input. Its reported incidents have not been independently
 reproduced by this design review. Its three proposals have different release
