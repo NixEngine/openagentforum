@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { canonicalizeJson, sha256Hex } from '../src/crypto.js';
+import { canonicalizeJson, sha256Hex, generateAgentKeyPair, signEnvelope, verifyEnvelope } from '../src/crypto.js';
 
 const fixture = JSON.parse(readFileSync(new URL('../../../apps/web/public/canonical-json-v1.json', import.meta.url), 'utf8')) as {
   format: string; vectors: { name: string; payloadJson: string; canonical: string; utf8Hex: string; sha256: string }[];
@@ -20,5 +20,52 @@ describe('swarmrelay-canonical-json-v1 fixed conformance vectors (#153)', () => 
     expect(Buffer.from(actual, 'utf8').toString('hex')).toBe(v.utf8Hex);
     expect(await sha256Hex(actual)).toBe(v.sha256);
     expect(createHash('sha256').update(Buffer.from(v.utf8Hex, 'hex')).digest('hex')).toBe(v.sha256);
+  });
+});
+
+describe('canonicalizeJson keeps output JSON-parseable (#undefined-payload)', () => {
+  // A checksum is taken over this string, so anything JSON.stringify would drop
+  // or replace has to be dropped or replaced here too; otherwise the signed
+  // string cannot survive the JSON round trip that delivers the envelope.
+  const roundTrip = (value: unknown) => JSON.parse(JSON.stringify(value));
+
+  it('omits object properties JSON cannot carry, like JSON.stringify does', () => {
+    const payload = { title: 'x', reward: undefined, onDone: () => 1, tag: Symbol('t') };
+    const canonical = canonicalizeJson(payload);
+    expect(canonical).toBe('{"title":"x"}');
+    expect(() => JSON.parse(canonical)).not.toThrow();
+  });
+
+  it('writes null for array elements JSON cannot carry, like JSON.stringify does', () => {
+    const canonical = canonicalizeJson([1, undefined, 3, () => 2]);
+    expect(canonical).toBe('[1,null,3,null]');
+    expect(() => JSON.parse(canonical)).not.toThrow();
+  });
+
+  it('refuses a value with no JSON representation at all instead of returning "undefined"', () => {
+    expect(() => canonicalizeJson(undefined)).toThrow(TypeError);
+    expect(() => canonicalizeJson(() => 1)).toThrow(TypeError);
+  });
+
+  it('canonicalizes a payload to the same bytes before and after a JSON round trip', () => {
+    const payload = { z: [1, undefined, { b: null, a: 'x' }], a: { y: undefined, b: 1 } };
+    const canonical = canonicalizeJson(payload);
+    expect(canonicalizeJson(roundTrip(payload))).toBe(canonical);
+    expect(canonical).toBe('{"a":{"b":1},"z":[1,null,{"a":"x","b":null}]}');
+  });
+
+  it('produces an envelope that still verifies when an optional field is undefined', async () => {
+    const agent = await generateAgentKeyPair();
+    const envelope = await signEnvelope(
+      {
+        channel: 'sec-research',
+        sender: agent.agentId,
+        type: 'intel',
+        payload: { action: 'intel_share', confidence: 0.9, reward: undefined },
+      },
+      agent.signingPrivateKey
+    );
+    const received = roundTrip(envelope);
+    expect(await verifyEnvelope(received, agent.signingPublicKey)).toEqual({ valid: true });
   });
 });

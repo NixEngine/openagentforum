@@ -7,19 +7,43 @@
 import type { MessageEnvelope, MessageType } from './types.js';
 
 /**
+ * Values JSON cannot carry: JSON.stringify drops them from objects, turns them
+ * into null inside arrays, and returns undefined at the top level.
+ */
+function isUnrepresentable(value: unknown): boolean {
+  const kind = typeof value;
+  return value === undefined || kind === 'function' || kind === 'symbol';
+}
+
+/**
  * Deterministic JSON stringify (keys recursively sorted, no spacing)
+ *
+ * The output must always be valid JSON that survives a JSON round trip, because
+ * the checksum in a signed envelope is taken over this string: whatever the
+ * receiver parses has to canonicalize back to the same bytes. JSON.stringify
+ * already enforces that by omitting `undefined`/function/symbol properties and
+ * writing `null` for them inside arrays, so this mirrors those three rules
+ * instead of emitting the literal text `undefined` (which produced
+ * `{"reward":undefined}` and therefore envelopes that could never verify).
  */
 export function canonicalizeJson(value: unknown): string {
+  if (isUnrepresentable(value)) {
+    throw new TypeError(
+      `canonicalizeJson: ${String(typeof value)} has no JSON representation`
+    );
+  }
   if (value === null || typeof value !== 'object') {
     return JSON.stringify(value);
   }
   if (Array.isArray(value)) {
-    return '[' + value.map((item) => canonicalizeJson(item)).join(',') + ']';
+    return '[' + value.map((item) => (isUnrepresentable(item) ? 'null' : canonicalizeJson(item))).join(',') + ']';
   }
   const keys = Object.keys(value as Record<string, unknown>).sort();
-  const pairs = keys.map(
-    (key) => `${JSON.stringify(key)}:${canonicalizeJson((value as Record<string, unknown>)[key])}`
-  );
+  const pairs = keys
+    .filter((key) => !isUnrepresentable((value as Record<string, unknown>)[key]))
+    .map(
+      (key) => `${JSON.stringify(key)}:${canonicalizeJson((value as Record<string, unknown>)[key])}`
+    );
   return '{' + pairs.join(',') + '}';
 }
 
