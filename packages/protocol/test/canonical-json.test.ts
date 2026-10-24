@@ -68,4 +68,64 @@ describe('canonicalizeJson keeps output JSON-parseable (#undefined-payload)', ()
     const received = roundTrip(envelope);
     expect(await verifyEnvelope(received, agent.signingPublicKey)).toEqual({ valid: true });
   });
+
+  it('writes null for a hole in a sparse array, like JSON.stringify does', () => {
+    // Array.prototype.map skips holes, so the previous implementation emitted
+    // `[1,,3]`, which is not JSON.
+    const sparse = [1, , 3] as unknown[];
+    const canonical = canonicalizeJson(sparse);
+    expect(canonical).toBe('[1,null,3]');
+    expect(canonical).toBe(JSON.stringify(sparse));
+    expect(() => JSON.parse(canonical)).not.toThrow();
+  });
+
+  it('writes null for every slot of an empty-of-values array, like JSON.stringify does', () => {
+    const holes = new Array(2) as unknown[];
+    const canonical = canonicalizeJson(holes);
+    expect(canonical).toBe('[null,null]');
+    expect(canonical).toBe(JSON.stringify(holes));
+    expect(() => JSON.parse(canonical)).not.toThrow();
+  });
+
+  it('serializes a Date through its toJSON, so the checksum matches after delivery', () => {
+    const payload = { d: new Date(0), nested: { at: new Date('2026-01-02T03:04:05.006Z') } };
+    const canonical = canonicalizeJson(payload);
+    expect(canonical).toBe(
+      '{"d":"1970-01-01T00:00:00.000Z","nested":{"at":"2026-01-02T03:04:05.006Z"}}'
+    );
+    // The receiving side only has the parsed JSON, so that is what has to match.
+    expect(canonicalizeJson(roundTrip(payload))).toBe(canonical);
+    expect(canonical).toBe(JSON.stringify(payload));
+  });
+
+  it('keeps a plain string property named toJSON instead of calling it', () => {
+    const payload = JSON.parse('{"toJSON":"x","a":1}') as Record<string, unknown>;
+    const canonical = canonicalizeJson(payload);
+    expect(canonical).toBe('{"a":1,"toJSON":"x"}');
+    expect(canonicalizeJson(roundTrip(payload))).toBe(canonical);
+  });
+
+  it('drops a property or nulls an element whose toJSON returns nothing, like JSON.stringify does', () => {
+    const dropped = { a: 1, b: { toJSON: () => undefined } };
+    expect(canonicalizeJson(dropped)).toBe('{"a":1}');
+    const nulled = [{ toJSON: () => undefined }];
+    expect(canonicalizeJson(nulled)).toBe('[null]');
+    expect(canonicalizeJson(roundTrip(dropped))).toBe(canonicalizeJson(dropped));
+  });
+
+  it('produces an envelope whose checksum survives a round trip with a Date payload', async () => {
+    const agent = await generateAgentKeyPair();
+    const envelope = await signEnvelope(
+      {
+        channel: 'sec-research',
+        sender: agent.agentId,
+        type: 'intel',
+        payload: { action: 'intel_share', observedAt: new Date(0) },
+      },
+      agent.signingPrivateKey
+    );
+    const received = roundTrip(envelope);
+    expect(received.checksum).toBe(envelope.checksum);
+    expect(await verifyEnvelope(received, agent.signingPublicKey)).toEqual({ valid: true });
+  });
 });
