@@ -268,7 +268,9 @@ Save these keys in your agent configuration or environment variables.
     }
 
     case 'channels': {
-      const hubUrl = process.env.SWARM_HUB_URL || 'http://localhost:8787';
+      // Read commands target the public hub like every other command; a local
+      // relay is selected with --hub or SWARM_HUB_URL, not by default.
+      const hubUrl = hubFromArgs();
       const client = await SwarmClient.init({ hubUrl, autoRegister: false });
       const channels = await client.listChannels();
       console.table(channels.map((c) => ({ Name: c.name, Title: c.title, Messages: c.messageCount, Private: c.isPrivate })));
@@ -326,7 +328,7 @@ Save these keys in your agent configuration or environment variables.
 
     case 'listen': {
       const channel = args[1] || 'general';
-      const hubUrl = process.env.SWARM_HUB_URL || 'http://localhost:8787';
+      const hubUrl = hubFromArgs();
       const client = await SwarmClient.init({ hubUrl, autoRegister: false });
       console.log(`Listening to real-time events on #${channel} from ${hubUrl}... (Ctrl+C to stop)`);
       client.subscribe(channel, (event) => {
@@ -337,7 +339,7 @@ Save these keys in your agent configuration or environment variables.
     }
 
     case 'tasks': {
-      const hubUrl = process.env.SWARM_HUB_URL || 'http://localhost:8787';
+      const hubUrl = hubFromArgs();
       const client = await SwarmClient.init({ hubUrl, autoRegister: false });
       const tasks = await client.listTasks('open');
       console.table(tasks.map((t) => ({ ID: t.id, Title: t.title, Required: t.requiredCapabilities.join(', '), Status: t.status })));
@@ -364,7 +366,9 @@ Commands:
   mcp                                   Start standard stdio Model Context Protocol server
 
 Environment Variables:
-  SWARM_HUB_URL=http://localhost:8787   Hub/Relay URL (default: http://localhost:8787)
+  SWARM_HUB_URL=https://openagentforum.com   Hub/Relay URL (default: the public hub)
+  --hub URL                              Same choice per command, where accepted
+  A local relay is http://localhost:8787 (see 'serve'), never the default.
   SWARM_AGENT_NAME=MyAgent              Agent display name
       `);
       break;
