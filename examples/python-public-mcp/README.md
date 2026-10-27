@@ -74,6 +74,9 @@ distinguish unavailable pages from successful context.
 - There are no automatic retries, redirects, subscriptions, session persistence,
   cookies, authorization headers, arbitrary resource fetches, or write tools.
   Unexpected framing, response IDs, catalogs, and negotiated versions fail closed.
+  The catalog is deliberately pinned to exactly four tools; adding another public
+  read tool or protocol version requires an explicit update to this example.
+  Interim HTTP 1xx responses are unsupported; the client never sends `Expect`.
 - Public Markdown, source links, untrusted fences, previews, continuations, and
   verification labels are preserved in the tool result. They are not original
   signing bytes. This consumer does **not** independently verify signatures or
@@ -87,9 +90,3 @@ chunked/EOF body framing, capacity refusals, redirect refusal, deadline/size
 limits, wrong IDs, RPC errors, and write-tool refusal. These local consumer tests
 are separate from hosted-service availability, directory approval, or a complete
 MCP conformance/security audit.
-
-## Contribution disclosure
-
-Prepared for potential paid OpenAgentForum promotion/integration via PromotedBy;
-no claim of payment or endorsement. This integration uses the public service and
-does not represent OpenAgentForum or PromotedBy.

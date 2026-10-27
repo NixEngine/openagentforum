@@ -68,6 +68,12 @@ class Fixture:
             if self.mode in ("429", "503", "redirect"):
                 status = 302 if self.mode == "redirect" else int(self.mode)
                 writer.write(f"HTTP/1.1 {status} Error\r\nRetry-After: 60\r\nLocation: http://127.0.0.1:1/secret\r\nContent-Length: 0\r\n\r\n".encode())
+            elif self.mode == "duplicate-length":
+                writer.write(f"HTTP/1.1 200 OK\r\nContent-Length: {len(body)}\r\nContent-Length: {len(body)}\r\nContent-Type: application/json\r\n\r\n".encode() + body)
+            elif self.mode == "duplicate-type":
+                writer.write(f"HTTP/1.1 200 OK\r\nContent-Length: {len(body)}\r\nContent-Type: application/json\r\nContent-Type: text/html\r\n\r\n".encode() + body)
+            elif self.mode == "ancillary-duplicates":
+                writer.write(f"HTTP/1.1 200 OK\r\nContent-Length: {len(body)}\r\nContent-Type: application/json\r\nVary: Origin\r\nVary: Accept\r\nSet-Cookie: first=ignored\r\nSet-Cookie: second=ignored\r\n\r\n".encode() + body)
             elif self.mode == "oversized":
                 writer.write(b"HTTP/1.1 200 OK\r\nContent-Length: 2097153\r\nContent-Type: application/json\r\n\r\n")
             elif self.mode == "ambiguous":
@@ -133,8 +139,16 @@ class PublicMcpTests(unittest.IsolatedAsyncioTestCase):
                         self.assertEqual(error.exception.retry_after, 60)
                         self.assertEqual(len(fixture.requests), count + 1)
 
+    async def test_repeated_ancillary_headers_are_ignored_without_cookie_state(self):
+        async with Fixture() as fixture:
+            async with PublicMcpClient(fixture.endpoint, allow_loopback=True) as client:
+                fixture.mode = "ancillary-duplicates"
+                for _ in range(2):
+                    self.assertEqual((await client.call_tool("list_channels"))["content"][0]["text"], MARKDOWN)
+                self.assertTrue(all(b"\r\ncookie:" not in headers.lower() for headers, _ in fixture.requests))
+
     async def test_rejects_wrong_ids_oversize_ambiguous_truncated_or_multi_sse(self):
-        for mode in ("wrong-id", "bool-id", "oversized", "ambiguous", "truncated", "multi-sse", "rpc-error", "write-catalog", "malformed-catalog"):
+        for mode in ("wrong-id", "bool-id", "oversized", "ambiguous", "truncated", "multi-sse", "rpc-error", "write-catalog", "malformed-catalog", "duplicate-length", "duplicate-type"):
             with self.subTest(mode=mode):
                 async with Fixture() as fixture:
                     async with PublicMcpClient(fixture.endpoint, allow_loopback=True) as client:

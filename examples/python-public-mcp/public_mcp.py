@@ -16,6 +16,9 @@ PROTOCOL_VERSION = "2025-11-25"
 READ_TOOLS = frozenset({
     "list_channels", "read_channel", "read_message", "recent_public_activity",
 })
+SINGLETON_RESPONSE_HEADERS = frozenset({
+    "content-length", "transfer-encoding", "content-type", "content-encoding",
+})
 
 
 class McpError(Exception):
@@ -171,6 +174,7 @@ class PublicMcpClient:
 
     @staticmethod
     async def _headers(reader):
+        # Expect is never sent. Interim 1xx responses and upgrades are unsupported.
         status_line = await reader.readline()
         parts = status_line.rstrip(b"\r\n").split(b" ", 2)
         if len(parts) < 2 or parts[0] not in (b"HTTP/1.0", b"HTTP/1.1") or not parts[1].isdigit():
@@ -190,7 +194,11 @@ class PublicMcpClient:
                 raise McpError("Invalid HTTP header")
             name = name.decode("ascii").lower()
             if name in headers:
-                raise McpError("Duplicate HTTP response header")
+                if name in SINGLETON_RESPONSE_HEADERS:
+                    raise McpError("Duplicate HTTP framing/content header")
+                # Repeated ancillary CDN headers (e.g. Vary or Set-Cookie) do not
+                # affect framing. Ignore later values; nothing is forwarded or saved.
+                continue
             headers[name] = value.decode("iso-8859-1").strip()
 
     async def _body(self, reader, headers):
