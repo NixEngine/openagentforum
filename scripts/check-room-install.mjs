@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { registryVersion } from './check-discovery-release.mjs';
+import { withRegistryRetry } from './lib/registry-retry.mjs';
 import { roomFailureFromOutput } from '../packages/room-admission/test/fixtures/room-diagnostics.mjs';
 
 const exec = promisify(execFile), root = fileURLToPath(new URL('../', import.meta.url));
@@ -98,8 +99,7 @@ export async function runRoomInstallCheck(args = process.argv.slice(2)) {
       .filter(name => process.env[name] !== undefined).map(name => [name, process.env[name]]));
     const npmOptions = ['--userconfig', userConfig, '--globalconfig', globalConfig, '--cache', join(dir, 'npm-cache'),
       '--registry', 'https://registry.npmjs.org'];
-    phase = 'anonymous registry metadata preflight';
-    const preflight = await preflightRoomRegistry({ mode, pkg, protocol });
+    if (registryClient && pkg.private) throw new Error(`${pkg.name}@${pkg.version}: candidate package is still private`);
     phase = registryProtocol ? 'pack candidate' : 'pack candidate and protocol';
     const packDirs = registryProtocol ? [source] : [source, join(root, 'packages/protocol')];
     for (const directory of packDirs) {
@@ -117,7 +117,7 @@ export async function runRoomInstallCheck(args = process.argv.slice(2)) {
     assert.deepEqual(listing.trim().split('\n').sort(), expected.map(file => 'package/' + file).sort());
     const { stdout: packedJson } = await exec('tar', ['-xOzf', artifact, 'package/package.json'], { env, timeout: 10000, maxBuffer: 64 * 1024 });
     const packedManifest = JSON.parse(packedJson);
-    assert.equal(Boolean(packedManifest.private), !registryClient);
+    assert.equal(Boolean(packedManifest.private), registryClient ? false : Boolean(pkg.private));
     assert.deepEqual(packedManifest.bin, { 'oaf-room': './dist/cli.mjs' });
     assert.equal(packedManifest.dependencies['@openagentforum/protocol'], protocol.version);
     for (const spec of Object.values(packedManifest.dependencies)) assert(!spec.startsWith('workspace:'));
@@ -126,9 +126,15 @@ export async function runRoomInstallCheck(args = process.argv.slice(2)) {
     const installTargets = [registryClient ? `${pkg.name}@${pkg.version}` : artifact];
     if (!registryProtocol) installTargets.push(protocolArtifact);
     installTargets.push(`@types/node@${nodeTypes.version}`);
-    await exec('npm', ['install', ...npmOptions, '--ignore-scripts=false', '--omit=dev', '--no-audit', '--no-fund', '--save-exact',
+    const install = () => exec('npm', ['install', ...npmOptions, '--ignore-scripts=false', '--omit=dev', '--no-audit', '--no-fund', '--save-exact',
       ...installTargets],
     { cwd: consumer, env, timeout: 120000, maxBuffer: 2 * 1024 * 1024 });
+    await (registryProtocol ? withRegistryRetry(install, { log: line => console.error(line), reset() {
+      rmSync(join(consumer, 'node_modules'), { recursive: true, force: true });
+      rmSync(join(consumer, 'package-lock.json'), { force: true });
+    } }) : install());
+    phase = 'anonymous registry metadata preflight';
+    const preflight = await preflightRoomRegistry({ mode, pkg, protocol });
     phase = 'verify isolated runtime and declaration closure';
     const lock = JSON.parse(readFileSync(join(consumer, 'package-lock.json'), 'utf8'));
     verifyRoomConsumerLock({ lock, mode });

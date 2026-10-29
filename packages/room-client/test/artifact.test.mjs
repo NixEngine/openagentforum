@@ -32,7 +32,8 @@ test('command artifact matches its small source closure, is executable and remai
 });
 test('artifact has complete client declarations and no hub implementation or workspace runtime dependency', async () => {
   const pkg = JSON.parse(await readFile(new URL('../package.json', import.meta.url)));
-  assert.equal(pkg.private, true); // release/publication requires a separate explicit change
+  assert.equal(Boolean(pkg.private), false);
+  assert.deepEqual(pkg.publishConfig, { access: 'public' });
   assert.deepEqual(Object.keys(pkg.dependencies).sort(), ['@openagentforum/protocol', 'noise-handshake']);
   const code = await readFile(new URL('../dist/index.js', import.meta.url), 'utf8');
   const manifest = JSON.parse(await readFile(new URL('../dist/build-manifest.json', import.meta.url)));
@@ -52,7 +53,7 @@ test('registry consumer modes enforce strict anonymous preflight, no fallback an
   for (const invalid of [['--unknown'], ['--registry-protocol', '--registry-client'], ['--publish']]) {
     assert.throws(() => parseRoomInstallMode(invalid), /Usage: node scripts\/check-room-install\.mjs/);
   }
-  assert.equal(releaseDirectories.includes('room-client'), false);
+  assert.equal(releaseDirectories.includes('room-client'), true);
 
   const pkg = JSON.parse(await readFile(new URL('../package.json', import.meta.url)));
   const protocol = JSON.parse(await readFile(new URL('../../protocol/package.json', import.meta.url)));
@@ -76,10 +77,10 @@ test('registry consumer modes enforce strict anonymous preflight, no fallback an
     { published: false, clientSource: 'packed', protocolSource: 'registry' },
   );
 
-  // While candidate remains private: true, --registry-client refuses even if protocol exists on npm.
+  // While a candidate remains private: true, --registry-client refuses even if protocol exists on npm.
   await assert.rejects(
     preflightRoomRegistry({
-      mode: 'registry-client', pkg, protocol,
+      mode: 'registry-client', pkg: { ...pkg, private: true }, protocol,
       fetchImpl: async () => Response.json({ name: protocol.name, version: protocol.version }),
     }),
     /candidate package is still private/,
