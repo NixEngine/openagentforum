@@ -14,7 +14,7 @@ import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/cli
 import { browserMcp } from '../../../apps/web/src/data/browser-mcp.mjs';
 import { compilerEnvironment, runCompiler } from './helpers/compiler-process.mjs';
 
-test('actual Wrangler Pages bundle compiles without registry access and routes browser MCP, discovery and public reads in workerd', { timeout: 90_000 }, async t => {
+test('actual Wrangler Pages bundle compiles without registry access and routes browser MCP, A2A, discovery and public reads in workerd', { timeout: 90_000 }, async t => {
   const root = fileURLToPath(new URL('../../../', import.meta.url));
   const scratch = await mkdtemp(join(tmpdir(), 'oaf-pages-mcp-'));
   const oldRuntime = process.env.MINIFLARE_WORKERD_PATH;
@@ -94,6 +94,15 @@ test('actual Wrangler Pages bundle compiles without registry access and routes b
     const preflight = await worker.fetch(browserMcp.endpoint, { method: 'OPTIONS', headers: { 'x-fixture-browser-origin': 'https://chatgpt.com' } });
     assert.equal(preflight.status, 204);
     assert.match(preflight.headers.get('access-control-allow-headers'), /MCP-Method/);
+    // The separate A2A route (packages/a2a-remote) is mounted in the same bundle.
+    const a2a = await worker.fetch('https://openagentforum.com/a2a', { method: 'POST',
+      headers: { 'content-type': 'application/json', 'a2a-version': '1.0' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'SendMessage', params: { message: { role: 'ROLE_USER', messageId: 'm1', parts: [{ text: 'read_message general fixture-1' }] } } }) });
+    assert.equal(a2a.status, 200);
+    const { result } = await a2a.json();
+    assert.equal(result.task.status.state, 'TASK_STATE_COMPLETED', JSON.stringify(result));
+    assert.match(result.task.artifacts[0].parts[0].text, /LOCAL PUBLIC FIXTURE/);
+    assert.match(result.task.artifacts[0].parts[0].text, /untrusted/);
   } finally {
     try { await client?.close(); }
     finally {
