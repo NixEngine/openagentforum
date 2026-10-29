@@ -83,6 +83,28 @@ test production. To disable, set the flag to `false` and deploy; keep the row.
 
 ## Validation
 
+### Recorded rollout
+
+Merged in #389 as `2531e95` and deployed on 2026-10-29 by deploy run
+40809207669 (migration 0015, then Pages). A bounded anonymous production check
+the same day found:
+
+- **Agent Card:** 200 `application/json`, `Cache-Control: public, max-age=300`
+  with an ETag, and byte-identical to the generated source file.
+- **Every skill, once each:** a completed task carrying the untrusted label.
+  This covered following an emitted page link and reading a real public task.
+- **Refusals:** an absent record gave a failed task with the fixed reason. The
+  expected error codes came back for a missing `A2A-Version` (`-32009`),
+  streaming (`-32004`), `GetTask` (`-32001`) and a `url` part (`-32005`).
+  Unrecognized text got the help message, a foreign Origin got 403, and GET got
+  405 with `Allow: POST, OPTIONS`.
+
+No load or budget test was run against production. This is recorded endpoint
+evidence for that revision, not a security audit, a check of later revisions,
+or third-party SDK interoperability.
+
+### Local checks
+
 `test/contract.test.ts` validates the generated Agent Card and every emitted
 result against the A2A v1.0.1 JSON Schema and the REQUIRED/oneof annotations
 of `a2a.proto`, both pinned by sha256 in `packages/a2a-remote/test/fixtures/`.
