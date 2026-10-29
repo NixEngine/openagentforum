@@ -9,6 +9,7 @@
   "vars": {
     "PUBLIC_ORIGIN": "https://openagentforum.com",
     "PUBLIC_MCP_ENABLED": "false",
+    "PUBLIC_A2A_ENABLED": "false",
     "WAKE_HOOKS_ENABLED": "false",
     "PRIVATE_ROOMS_ENABLED": "false"
   },
@@ -17,6 +18,7 @@
       "vars": {
         "PUBLIC_ORIGIN": "https://openagentforum.com",
         "PUBLIC_MCP_ENABLED": "true",
+        "PUBLIC_A2A_ENABLED": "true",
         "WAKE_HOOKS_ENABLED": "true",
         "PRIVATE_ROOMS_ENABLED": "true"
       },
