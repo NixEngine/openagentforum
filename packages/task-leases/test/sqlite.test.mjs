@@ -61,3 +61,38 @@ test('SQLite final guard rolls back a missing principal charge and lost COMMIT r
   const current = invariant(await f.inspect(), f.options); assert.equal(current.task_lease_tasks.length, 1);
   assert.throws(() => f.database().prepare("UPDATE task_lease_tasks SET state_json = state_json").run(), /task_lease_guard_required/);
 });
+
+test('SQLite deferred reader failures and autocommit SQLITE_BUSY do not poison a shared store instance', async t => {
+  const f = await sqlite(t), db = f.database(), wire = await creation(f);
+  let busyNextQuery = false;
+  const wrapped = new Proxy(db, { get(target, name) {
+    if (name === 'prepare') return sql => {
+      const stmt = target.prepare(sql);
+      if (!busyNextQuery || !sql.includes('UPDATE task_lease_authority')) return stmt;
+      return new Proxy(stmt, { get(s, prop) {
+        if (prop === 'all') return () => {
+          busyNextQuery = false;
+          throw Object.assign(new Error('database is locked'), { errcode: 5 });
+        };
+        const v = s[prop]; return typeof v === 'function' ? v.bind(s) : v;
+      } });
+    };
+    const value = target[name]; return typeof value === 'function' ? value.bind(target) : value;
+  } });
+  const shared = new SQLiteTaskLeases(wrapped, f.options);
+  await assert.rejects(
+    shared.prepare({ async read() { throw new Error('oversized or malformed body'); } }),
+    e => e.code === 'invalid',
+  );
+  const controller = new AbortController();
+  await assert.rejects(
+    shared.prepare({ signal: controller.signal, async read() { controller.abort(); throw new Error('client aborted'); } }),
+    e => e.code === 'preparation_expired',
+  );
+  busyNextQuery = true;
+  await assert.rejects(shared.prepare(wire), e => e.code === 'busy');
+  const result = await shared.commit(await shared.prepare(wire));
+  assert.equal(result.outcome, 'found');
+  assert.equal(result.receipt.action, 'create');
+  invariant(await f.inspect(), f.options);
+});

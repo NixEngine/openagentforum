@@ -80,7 +80,18 @@ export class TaskLeaseStore {
     this.#fresh(life, this.#greatestClock);
     need(typeof input === 'string' || object(input) && typeof input.read === 'function', 'invalid');
     if (typeof input !== 'string') need(!input.signal?.aborted, 'preparation_expired');
-    const wire = typeof input === 'string' ? input : await input.read();
+    let wire: string;
+    if (typeof input === 'string') {
+      wire = input;
+    } else {
+      try {
+        wire = await input.read();
+      } catch (error) {
+        const aborted = Boolean(input.signal?.aborted)
+          || (error instanceof TaskLeaseError && error.code === 'preparation_expired');
+        throw new TaskLeaseError(aborted ? 'preparation_expired' : 'invalid');
+      }
+    }
     this.#fresh(life, this.#greatestClock);
     if (typeof input !== 'string') need(!input.signal?.aborted, 'preparation_expired');
     const proof = await verifyWire(wire); life.proofExpiresAt = proof.command.expiresAt;

@@ -21,7 +21,16 @@ export class SQLiteTaskLeases extends TaskLeaseStore {
       const databases = db.prepare('PRAGMA database_list').all();
       need(databases.length <= 2 && databases.every(d => d.name === 'main' || d.name === 'temp'), 'authority');
     };
-    super({ async query({ sql, values }) { check(); return db.prepare(sql).all(...values); },
+    const isBusy = (error: unknown) =>
+      typeof error === 'object' && error !== null && 'errcode' in error && error.errcode === 5;
+    super({ async query({ sql, values }) {
+        try {
+          check(); return db.prepare(sql).all(...values);
+        } catch (error) {
+          if (isBusy(error)) throw new TaskLeaseError('busy');
+          throw error;
+        }
+      },
       async batch(statements) {
         let begun = false, committing = false;
         try {
@@ -30,7 +39,7 @@ export class SQLiteTaskLeases extends TaskLeaseStore {
           committing = true; db.exec('COMMIT'); begun = false; return results;
         } catch (error) {
           if (begun) { try { db.exec('ROLLBACK'); } catch { throw new TaskLeaseError('unavailable'); } }
-          if (!begun && !committing && typeof error === 'object' && error !== null && 'errcode' in error && error.errcode === 5) {
+          if (!begun && !committing && isBusy(error)) {
             throw new TaskLeaseError('busy');
           }
           throw error;
