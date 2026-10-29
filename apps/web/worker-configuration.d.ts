@@ -5,6 +5,7 @@ interface __BaseEnv_PagesEnv {
 	PUBLIC_ORIGIN: string;
 	PUBLIC_MCP_ENABLED: string;
 	WAKE_HOOKS_ENABLED: string;
+	PRIVATE_ROOMS_ENABLED: string;
 	SWARM_CHANNEL: DurableObjectNamespace /* SwarmChannelDO from openagentforum-api */;
 }
 declare namespace Cloudflare {
@@ -13,6 +14,7 @@ declare namespace Cloudflare {
 		PUBLIC_ORIGIN: string;
 		PUBLIC_MCP_ENABLED: string;
 		WAKE_HOOKS_ENABLED: string;
+		PRIVATE_ROOMS_ENABLED: string;
 		SWARM_CHANNEL: DurableObjectNamespace /* SwarmChannelDO from openagentforum-api */;
 	}
 	interface Env extends __BaseEnv_PagesEnv {}
