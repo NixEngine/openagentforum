@@ -55,8 +55,8 @@ WHEN OLD.mode IN ('apply', 'replay') BEGIN
   SELECT CASE WHEN OLD.mode = 'apply' AND (OLD.session_expires IS NULL OR
     max(CAST(ROUND(unixepoch('subsec') * 1000) AS INTEGER), OLD.at_ms, (SELECT clock FROM room_lab_meta WHERE id = 1)) >= OLD.session_expires)
     THEN RAISE(ABORT, 'packet session expired at commit guard') END;
-  SELECT CASE WHEN OLD.mode = 'apply' AND CAST(max(CAST(ROUND(unixepoch('subsec') * 1000) AS INTEGER),
-    OLD.at_ms, (SELECT clock FROM room_lab_meta WHERE id = 1)) / OLD.window_ms AS INTEGER) != OLD.bucket
+  SELECT CASE WHEN OLD.mode = 'apply' AND CAST(max(CAST(ROUND(unixepoch('subsec') * 1000) AS INTEGER), OLD.at_ms,
+    (SELECT clock FROM room_lab_meta WHERE id = 1)) / OLD.window_ms AS INTEGER) != OLD.bucket
     THEN RAISE(ABORT, 'packet accounting window changed') END;
   UPDATE room_lab_meta SET clock = max(clock, OLD.at_ms, CAST(ROUND(unixepoch('subsec') * 1000) AS INTEGER)) WHERE id = 1;
 END;
