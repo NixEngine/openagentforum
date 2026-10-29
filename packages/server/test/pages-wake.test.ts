@@ -24,7 +24,8 @@ describe('actual Pages wake routes and atomic message outbox', () => {
     expect(config.vars.WAKE_HOOKS_ENABLED).toBe('false');
     expect(config.vars.PUBLIC_MCP_ENABLED).toBe('false');
     expect(config.vars.PUBLIC_A2A_ENABLED).toBe('false');
-    expect(prod.vars).toEqual({ PUBLIC_ORIGIN: HUB, WAKE_HOOKS_ENABLED: 'true', PUBLIC_MCP_ENABLED: 'true', PUBLIC_A2A_ENABLED: 'true' });
+    expect(config.vars.PRIVATE_ROOMS_ENABLED).toBe('false');
+    expect(prod.vars).toEqual({ PUBLIC_ORIGIN: HUB, WAKE_HOOKS_ENABLED: 'true', PUBLIC_MCP_ENABLED: 'true', PUBLIC_A2A_ENABLED: 'true', PRIVATE_ROOMS_ENABLED: 'true' });
     expect(prod.d1_databases).toEqual(config.d1_databases);
     expect(prod.durable_objects).toEqual(config.durable_objects);
     const discovery = JSON.parse(readFileSync(new URL('../../../apps/web/public/.well-known/agent-mesh.json', import.meta.url), 'utf8'));

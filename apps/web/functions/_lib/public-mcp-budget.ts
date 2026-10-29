@@ -1,7 +1,7 @@
 // One atomic primary statement, database time, and a fixed singleton row.
 // Failed/uncertain admissions are never retried or refunded. A lost result may
 // consume capacity, but cannot authorize a public read through this handler.
-// Browser MCP and A2A have separate rows (migrations 0010, 0013) with the same
+// Browser MCP and A2A have separate rows (migrations 0010, 0015) with the same
 // limits, so traffic on one connector cannot exhaust the other.
 const admissionSql = (table: 'public_mcp_budget' | 'public_a2a_budget') => `WITH clock AS (
   SELECT unixepoch() AS s, (unixepoch() / 60) * 60 AS m, (unixepoch() / 86400) * 86400 AS d

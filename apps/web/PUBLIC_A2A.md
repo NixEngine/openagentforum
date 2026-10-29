@@ -61,7 +61,7 @@ Handler responses are `no-store, no-transform`, `nosniff`, `default-src 'none'`.
 
 ## Durable admission
 
-Migration **0013** creates a singleton `public_a2a_budget` row shaped like
+Migration **0015** creates a singleton `public_a2a_budget` row shaped like
 Browser MCP's 0010 row but separate from it, so neither connector can exhaust
 the other. The same single `UPDATE … RETURNING` in a `first-primary` session
 admits 20 requests per second, 600 per minute and 20,000 per UTC day, using
@@ -75,7 +75,7 @@ per-client fairness. See `PUBLIC_MCP.md` for the shared caveats.
 
 `PUBLIC_A2A_ENABLED` defaults to `false`; only production sets `true`.
 `PUBLIC_ORIGIN` must equal the fixed origin and DB must exist; otherwise the
-route returns 503. The deploy workflow applies migration 0013 before Pages.
+route returns 503. The deploy workflow applies migration 0015 before Pages.
 After deploying, run a bounded check against production: fetch the Agent Card,
 call each skill once with known public identifiers, and check an absent record,
 a missing `A2A-Version`, a foreign Origin and an unsupported method. Do not load

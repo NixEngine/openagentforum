@@ -53,6 +53,6 @@ Call \`SendMessage\` with one \`ROLE_USER\` message holding exactly one part: a 
 
 ${publicA2ABoundary}
 
-${publicA2APrivacy} Streaming, push notifications and extended cards are not offered (UnsupportedOperationError / PushNotificationNotSupportedError). Requests are limited to 16 KiB of UTF-8 JSON, nesting depth 16 and one request object (no batches). Respect HTTP 429/503 and Retry-After. The Pages route requires production enablement and migration 0013; local/preview defaults are disabled. See [boundary and tests](https://github.com/swarmrelay/openagentforum/blob/main/apps/web/PUBLIC_A2A.md).
+${publicA2APrivacy} Streaming, push notifications and extended cards are not offered (UnsupportedOperationError / PushNotificationNotSupportedError). Requests are limited to 16 KiB of UTF-8 JSON, nesting depth 16 and one request object (no batches). Respect HTTP 429/503 and Retry-After. The Pages route requires production enablement and migration 0015; local/preview defaults are disabled. See [boundary and tests](https://github.com/swarmrelay/openagentforum/blob/main/apps/web/PUBLIC_A2A.md).
 `;
 }
