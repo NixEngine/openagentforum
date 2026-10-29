@@ -100,8 +100,8 @@ importers:
   packages/cli:
     dependencies:
       '@hono/node-server':
-        specifier: ^1.13.8
-        version: 1.19.17(hono@4.13.13)
+        specifier: ^2.1.5
+        version: 2.1.5(hono@4.13.13)
       '@openagentforum/mcp':
         specifier: workspace:*
         version: link:../mcp
@@ -270,8 +270,8 @@ importers:
         version: 3.3.11
     devDependencies:
       '@hono/node-server':
-        specifier: 1.19.17
-        version: 1.19.17(hono@4.13.13)
+        specifier: 2.1.5
+        version: 2.1.5(hono@4.13.13)
       '@openagentforum/server':
         specifier: workspace:*
         version: link:../server
@@ -385,8 +385,8 @@ importers:
         version: link:../protocol
     devDependencies:
       '@hono/node-server':
-        specifier: ^1.13.8
-        version: 1.19.17(hono@4.13.13)
+        specifier: ^2.1.5
+        version: 2.1.5(hono@4.13.13)
       '@openagentforum/server':
         specifier: workspace:*
         version: link:../server
@@ -403,8 +403,8 @@ importers:
   packages/server:
     dependencies:
       '@hono/node-server':
-        specifier: ^1.13.8
-        version: 1.19.17(hono@4.13.13)
+        specifier: ^2.1.5
+        version: 2.1.5(hono@4.13.13)
       '@openagentforum/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -1030,11 +1030,11 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@hono/node-server@1.19.17':
-    resolution: {integrity: sha512-dSneS5qhiauZWGDCeK4o695Xd9nUNjviSZCMQrj10eetr8Uln1ucn6bbphOM6UynAMMtNIzZNSpL9vnASJwrPQ==}
-    engines: {node: '>=18.14.1'}
+  '@hono/node-server@2.1.5':
+    resolution: {integrity: sha512-MgP/I06GdvsilDspMk/qmRzpk8LOUStP6jFAbSRi40W09DhoyUn+Mj7eyKICPqeYKybOjVFLVIAQzvu1bfIa7Q==}
+    engines: {node: '>=20'}
     peerDependencies:
-      hono: ^4
+      hono: ^4 || ^5.0.0-0
 
   '@img/colour@1.1.0':
     resolution: {integrity: sha512-Td76q7j57o/tLVdgS746cYARfSyxk8iEfRxewL9h4OMzYhbW4TAcppl0mT4eyqXddh6L/jwoM75mo7ixa/pCeQ==}
@@ -3838,7 +3838,7 @@ snapshots:
   '@esbuild/win32-x64@0.28.2':
     optional: true
 
-  '@hono/node-server@1.19.17(hono@4.13.13)':
+  '@hono/node-server@2.1.5(hono@4.13.13)':
     dependencies:
       hono: 4.13.13
 
@@ -4164,7 +4164,7 @@ snapshots:
 
   '@modelcontextprotocol/sdk@1.32.1(zod@4.6.7)':
     dependencies:
-      '@hono/node-server': 1.19.17(hono@4.13.13)
+      '@hono/node-server': 2.1.5(hono@4.13.13)
       ajv: 8.20.0
       ajv-formats: 3.0.1(ajv@8.20.0)
       content-type: 1.0.5
