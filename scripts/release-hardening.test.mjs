@@ -21,10 +21,10 @@ test('plans every exact anonymous registry read before publishing only definitiv
       events.push('read');
       return pkg.dir === 'mcp' ? new Response('not found', { status: 404 }) : published(pkg);
     },
-    publish(entry) { assert.equal(events.length, 7); assert.equal(entry.dir, 'mcp'); events.push('publish'); },
+    publish(entry) { assert.equal(events.length, 8); assert.equal(entry.dir, 'mcp'); events.push('publish'); },
   });
   assert.equal(plan.filter(p => p.action === 'publish').length, 1);
-  assert.deepEqual(events, [...Array(7).fill('read'), 'publish']);
+  assert.deepEqual(events, [...Array(8).fill('read'), 'publish']);
 });
 
 for (const failure of [401, 403, 429, 500, 503, 'network', 'malformed', 'identity', 'redirected-404', 'oversized']) {
@@ -48,8 +48,8 @@ for (const failure of [401, 403, 429, 500, 503, 'network', 'malformed', 'identit
 }
 
 test('validates the whole fixed release scope before sending requests', async () => {
-  for (const mutation of [p => p.pop(), p => p.reverse(), p => { p[6].dir = '../other'; },
-    p => { p[6].name = '@another/package'; }, p => { p[6].private = true; }, p => { p[6].version = 'latest'; }]) {
+  for (const mutation of [p => p.pop(), p => p.reverse(), p => { p[7].dir = '../other'; },
+    p => { p[7].name = '@another/package'; }, p => { p[7].private = true; }, p => { p[7].version = 'latest'; }]) {
     const source = packages(); mutation(source);
     let calls = 0;
     await assert.rejects(publicationPlan(source, async () => { calls++; }));
